@@ -327,12 +327,14 @@ func (r *Reloader) Watch(ctx context.Context) error {
 	for {
 		select {
 		case <-applyCtx.Done():
+			level.Info(r.logger).Log("msg", " <-applyCtx.Done() in watch")
 			if ctx.Err() != nil {
 				applyCancel()
 				wg.Wait()
 				return nil
 			}
 		case <-r.watcher.notify:
+			level.Info(r.logger).Log("msg", " <-r.watcher.notify in watch")
 		}
 
 		// Reset the watch timeout.
@@ -340,6 +342,7 @@ func (r *Reloader) Watch(ctx context.Context) error {
 		applyCtx, applyCancel = context.WithTimeout(ctx, r.watchInterval)
 
 		r.configApply.Inc()
+		level.Info(r.logger).Log("msg", "start apply: r.apply(applyCtx)")
 		if err := r.apply(applyCtx); err != nil {
 			r.configApplyErrors.Inc()
 			level.Error(r.logger).Log("msg", "apply error", "err", err)
@@ -819,6 +822,8 @@ func (w *watcher) run(ctx context.Context) {
 					cancel()
 				}
 
+				level.Info(w.logger).Log("msg", " <-notify in run")
+
 				delayCtx, cancel = context.WithCancel(ctx)
 
 				wg.Add(1)
@@ -853,6 +858,7 @@ func (w *watcher) run(ctx context.Context) {
 
 		case event := <-w.w.Events:
 			w.watchEvents.Inc()
+			level.Info(w.logger).Log("msg", " event := <-w.w.Events: in run: receive event")
 			if _, ok := w.watchedDirs[filepath.Dir(event.Name)]; ok {
 				select {
 				case notify <- struct{}{}:
